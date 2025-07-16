@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+
+localRef=""
+remoteRef=""
+while read local_ref local_oid remote_ref remote_oid
+  do
+    localRef=$local_ref
+    remoteRef=$remote_ref
+  done
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# src 폴더에 변경된 .js/.ts 파일이 있을 때만 검증 실행
+if [ "$(git diff --name-only HEAD origin/main src/ | grep -E '\.(js|ts)$' | xargs | wc -l)" -ne 0 ]
+then
+  echo "🔍 ESLint 검사 시작..."
+  npm run lint
+  if [ $? -ne 0 ]; then
+    echo "❌ ESLint 오류가 발견되었습니다. push가 중단됩니다."
+    exit 1
+  fi
+  echo "✅ ESLint 검사 통과"
+  
+  echo "🧪 E2E 테스트 시작..."
+  npm run test:e2e
+  if [ $? -ne 0 ]; then
+    echo "❌ E2E 테스트가 실패했습니다. push가 중단됩니다."
+    exit 1
+  fi
+  echo "✅ E2E 테스트 통과"
+fi 
